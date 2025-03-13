@@ -1,9 +1,9 @@
 #include <cstdlib> 
 #include <iostream> 
 #include <curl/curl.h>
-// #include <regex>
 #include <nlohmann/json.hpp>
 #include <string>
+#include "./include/CLI11.hpp"
 
 using json = nlohmann::json;
 
@@ -13,17 +13,12 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     return size * nmemb;
 }
 
-int main (int argc, char *argv[]) {
-    
+void installPackage(std::string installpackage){
+
     CURL *curl = curl_easy_init();
     CURLcode res;
 
-    if (argc < 2){
-        std::cerr << "Check the help please"<<std::endl;
-        return 1;
-    }
-
-    std::string aur_url = "https://aur.archlinux.org/rpc/v5/search?arg=" + std::string(argv[1]);
+    std::string aur_url = "https://aur.archlinux.org/rpc/v5/search?arg=" + installpackage;
     std::string readBuffer;
 
     curl_easy_setopt(curl, CURLOPT_URL, aur_url.c_str());
@@ -37,8 +32,6 @@ int main (int argc, char *argv[]) {
         fprintf(stderr, "Failed to initialize CURL\n");
     }
 
-    std::cout<<readBuffer<<std::endl;
-    
     auto json_response = json::parse(readBuffer);
     if (json_response["resultcount"] == 0){
         std::cerr<<"No packages found"<<std::endl;
@@ -60,7 +53,6 @@ int main (int argc, char *argv[]) {
 
     if(choice < 1 || choice > pkg_names.size()){
         std::cerr<<"Invaild choice.\n";
-        return 1;
     }
 
     std::string selected_pkg = pkg_names[choice - 1];
@@ -70,6 +62,40 @@ int main (int argc, char *argv[]) {
     std::system(command.c_str());
 
     std::system(install_command.c_str());
+
+}
+
+void updatePackages(){
+    std::system("sudo pacman -Syu");
+}
+
+void updatePackagesAUR(){
+    std::system("paru");
+}
+
+int main (int argc, char *argv[]) {
+    
+    CLI::App app{"Packify: A Small AUR Wrapper"};
+
+    std::string packageName;
+    bool checkupdate{false};
+    bool checkupdateAUR{false};
+
+    app.add_option("-i,--install", packageName, "Install Package");
+    app.add_flag("-u, --update", checkupdate, "Updates Package");
+    app.add_flag("--uA, --updateAUR", checkupdateAUR, "Updates AUR Packages");
+    
+    CLI11_PARSE(app, argc, argv);
+
+    if(!packageName.empty()){
+        installPackage(packageName);
+    }
+    if(checkupdate){
+        updatePackages();
+    }
+    if(checkupdateAUR){
+        updatePackagesAUR();
+    }
 
     return 0;
 }
