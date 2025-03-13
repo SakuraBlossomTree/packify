@@ -73,17 +73,24 @@ void updatePackagesAUR(){
     std::system("paru");
 }
 
+void removePackage(std::string packageName){
+    std::string command = "paru -Rns " + packageName;
+    std::system(command.c_str());
+}
+
 int main (int argc, char *argv[]) {
     
     CLI::App app{"Packify: A Small AUR Wrapper"};
 
     std::string packageName;
+    std::string removePackageName;
     bool checkupdate{false};
     bool checkupdateAUR{false};
 
-    app.add_option("-i,--install", packageName, "Install Package");
     app.add_flag("-u, --update", checkupdate, "Updates Package");
     app.add_flag("--uA, --updateAUR", checkupdateAUR, "Updates AUR Packages");
+    app.add_option("-i,--install", packageName, "Install Package");
+    app.add_option("-r,--remove", removePackageName, "Remove Package");
     
     CLI11_PARSE(app, argc, argv);
 
@@ -95,6 +102,9 @@ int main (int argc, char *argv[]) {
     }
     if(checkupdateAUR){
         updatePackagesAUR();
+    }
+    if(!removePackageName.empty()){
+        removePackage(removePackageName);
     }
 
     return 0;
