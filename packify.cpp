@@ -12,6 +12,10 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
+void cleanPackages(std::string packageName){
+    std::string command = "sudo rm -r " + packageName;
+    std::system(command.c_str());
+}
 
 void installPackage(std::string installpackage){
 
@@ -39,10 +43,17 @@ void installPackage(std::string installpackage){
 
     std::vector<std::string> pkg_names;
     for (int pkg_num=0;pkg_num<json_response["resultcount"];pkg_num++){
-        std::cout<<pkg_num+1<<" "<<json_response["results"][pkg_num]["Description"].get<std::string>()<<std::endl;
-        std::string pkg_name = json_response["results"][pkg_num]["PackageBase"].get<std::string>();
-        std::cout<<json_response["results"][pkg_num]["Name"].get<std::string>()<<std::endl;
-        std::cout<<json_response["results"][pkg_num]["Maintainer"].get<std::string>()<<std::endl;
+        const auto pkg = json_response["results"][pkg_num];
+        std::cout<<pkg_num+1<<" "<<pkg["Description"].get<std::string>()<<std::endl;
+        std::string pkg_name = pkg["PackageBase"].get<std::string>();
+        std::cout<<pkg["Name"].get<std::string>()<<std::endl;
+        std::string maintainer;
+        if(pkg["Maintainer"].is_null()){
+            maintainer = "None";
+        } else {
+            maintainer = pkg["Maintainer"].get<std::string>();
+        }
+        std::cout<<maintainer<<std::endl;
         std::cout<<"---------------------------------------------------------------------------------"<<std::endl;
         pkg_names.push_back(pkg_name);
     }
@@ -63,6 +74,7 @@ void installPackage(std::string installpackage){
 
     std::system(install_command.c_str());
 
+    cleanPackages(selected_pkg);
 }
 
 void updatePackages(){
@@ -74,9 +86,15 @@ void updatePackagesAUR(){
 }
 
 void removePackage(std::string packageName){
-    std::string command = "paru -Rns " + packageName;
+    std::string command = "paru -R " + packageName;
     std::system(command.c_str());
 }
+
+void listPackages(){
+    std::string command = "sudo pacman -Q";
+    std::system(command.c_str());
+}
+
 
 int main (int argc, char *argv[]) {
     
@@ -86,11 +104,14 @@ int main (int argc, char *argv[]) {
     std::string removePackageName;
     bool checkupdate{false};
     bool checkupdateAUR{false};
+    bool packageList{false};
 
-    app.add_flag("-u, --update", checkupdate, "Updates Package");
-    app.add_flag("--uA, --updateAUR", checkupdateAUR, "Updates AUR Packages");
-    app.add_option("-i,--install", packageName, "Install Package");
-    app.add_option("-r,--remove", removePackageName, "Remove Package");
+    app.add_flag("--Syu, --update", checkupdate, "Updates Package");
+    app.add_flag("--SSyu, --updateAUR", checkupdateAUR, "Updates AUR Packages");
+    app.add_flag("-Q, --search", packageList, "Search Packages");
+    app.add_option("-S,--install", packageName, "Install Package");
+    app.add_option("-R,--remove", removePackageName, "Remove Package");
+
     
     CLI11_PARSE(app, argc, argv);
 
@@ -107,5 +128,9 @@ int main (int argc, char *argv[]) {
         removePackage(removePackageName);
     }
 
+    if(packageList){
+        listPackages(); 
+    }
+    
     return 0;
 }
